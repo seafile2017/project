@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load seahub_tags avatar_tags i18n %}
+{% load url from future %}
+
+{% block viewport %}{% endblock %}
+
+{% block extra_style %}
+{% include 'snippets/file_view_style.html' %}
+{% endblock %}
+
+{% block header_css_class %}hide{% endblock %}
+{% block main_css_class %}{% endblock %} {# remove the padding-top css #}
+
+{% block main_content %}
+    <div id="view-hd">
+      {% block view_hd %}
+        <h2>
+          {{file_name}}
+          <span class="commit-time">({{ current_commit.props.ctime|tsstr_sec }})</span>
+        </h2>
+      {% endblock %}
+    </div>
+
+    <div id="file">
+        <div id="file-op" class="ovhd">
+            <p class="history-file-path fleft">
+              {% block file_path %}
+                {% trans "Current Path: "%}
+                {% for name, link in zipped %}
+                    {% if not forloop.last %} {{ name }} / {% else %} {{ name }} {% endif %}
+                {% endfor %}
+              {% endblock %}
+            </p>
+
+            <a class="sf-btn-link fright" href="{% url 'download_file' repo.id obj_id%}?file_name={{ file_name|urlencode }}&p={{path|urlencode}}" id="download">{% trans "Download"%}</a>
+        </div>
+        {% include 'snippets/file_content_html.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_script %}
+{% include "snippets/file_view_js.html" %}
+<script type="text/javascript">
+$(function() {
+    var dld_url = $('#download').attr('href');
+    $('#file-view-tip').append('<a href="' + dld_url + '" class="sf-btn-link big-btn-link">' + "{% trans "Download" %}" + '</a>');
+});
+
+{% if filetype == 'PDF' and use_pdfjs and not err %}
+{% else %}
+function setFileViewAreaHeight() {
+    var file_view = $('#file-view');
+    if ($(window).height() > file_view.outerHeight(true) + file_view.offset().top) {
+        file_view.outerHeight($(window).height() - file_view.offset().top);
+    }
+}
+$(window).load(setFileViewAreaHeight).resize(setFileViewAreaHeight);
+{% endif %}
+
+{% include "snippets/file_content_js.html" %}
+</script>
+{% endblock %}

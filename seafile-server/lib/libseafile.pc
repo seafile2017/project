@@ -1,0 +1,11 @@
+prefix=(DESTDIR)/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libseafile
+Description: Client library for accessing seafile service.
+Version: 6.0.1
+Libs: -L${libdir} -lseafile -L/usr/local/lib -lsearpc -lgio-2.0 -lgobject-2.0 -lglib-2.0 -ljansson
+Cflags: -I${includedir} -pthread -I/usr/local/include -I/usr/local/include/searpc -I/usr/local/include -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
+Requires: gobject-2.0 glib-2.0
