@@ -22,7 +22,8 @@
         {% endif %}
     </ul>
     <div class="fright">
-        <button id="import-users-btn">{% trans "Import users" %}</button>
+	<button id="import-users-btn-json">{% trans "Import users JSON" %}</button>
+        <button id="import-users-btn">{% trans "Import users CSV" %}</button>
         <button id="add-user-btn">{% trans "Add user" %}</button>
         <button id="export-excel">{% trans "Export Excel" %}</button>
     </div>
@@ -56,6 +57,14 @@
     <input type="file" name="file" />
     <p class="tip">{% trans "File format: user@mail.com,password"%}</p>
     <p class="error hide">{% trans "Please choose a CSV file" %}</p>
+    <button type="submit" class="submit">{% trans "Submit" %}</button>
+</form>
+
+<form id="upload-json-form" class="hide" enctype="multipart/form-data" method="post" action="{% url 'batch_add_user' %}">{% csrf_token %}
+    <h3>{% trans "Import users from a JSON file" %}</h3>
+    <input type="file" name="file" />
+    <p class="tip">{% trans "File format: "%}</p>
+    <p class="error hide">{% trans "Please choose a JSON file" %}</p>
     <button type="submit" class="submit">{% trans "Submit" %}</button>
 </form>
 
@@ -202,7 +211,18 @@ $('#import-users-btn').click(function () {
     $('#upload-csv-form').modal();
     $('#simplemodal-container').css({'width':'auto', 'height':'auto'});
 });
+$('#import-users-btn-json').click(function () {
+    $('#upload-json-form').modal();
+    $('#simplemodal-container').css({'width':'auto', 'height':'auto'});
+});
 $('#upload-csv-form').submit(function() {
+    var form = $(this);
+    if (!$('[name=file]', form).val()) {
+        $('.error', form).removeClass('hide');
+        return false;
+    }
+});
+$('#upload-json-form').submit(function() {
     var form = $(this);
     if (!$('[name=file]', form).val()) {
         $('.error', form).removeClass('hide');
