@@ -522,16 +522,17 @@
 
         <h3 class="fleft">{% trans "Groups" %}</h3>
         <a class="sf-btn-link btn-white js-export-excel fright hide" href="{% url "sys_group_admin_export_excel" %}">{% trans "Export Excel" %}</a>
-	<button id="import-group-btn-json" class="sf-btn-link btn-white js-export-excel fright hide">{% trans "Import group JSON" %}</button>
 
-        <form id="upload-json-form" class="hide" enctype="multipart/form-data" method="post" 			action="{% url 'batch_add_group' %}">{% csrf_token %}
+	<button id="import-group-btn-json" class="sf-btn-link btn-white js-export-excel fright 	hide" onclick="$('#upload-json-form').modal();$('#simplemodal-container').css({'width':'auto', 'height':'auto'});">{% trans "Import group JSON" %}</button>
+
+        <form id="upload-json-form" class="hide" onSubmit="var form = $(this);if (!$('[name=file]', form).val()) {$('.error', form).removeClass('hide');return false;}" enctype="multipart/form-data" method="post" action="{% url 'batch_add_user' %}">{% csrf_token %}
     		<h3>{% trans "Import users from a JSON file" %}</h3>
     		<input type="file" name="file" />
     		<p class="tip">{% trans "File format: "%}</p>
     		<p class="error hide">{% trans "Please choose a JSON file" %}</p>
     		<button type="submit" class="submit">{% trans "Submit" %}</button>
 	</form>
-    </div>
+
     <span class="loading-icon loading-tip"></span>
     <table>
         <thead>
