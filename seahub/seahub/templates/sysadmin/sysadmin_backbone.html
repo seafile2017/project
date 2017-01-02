@@ -1,6 +1,7 @@
 {% load staticfiles i18n %}
 {% load compress %}
 {% load seahub_tags avatar_tags group_avatar_tags %}
+
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
@@ -21,6 +22,8 @@
 {% endcompress %}
 
 {% if branding_css != '' %}<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}{{ branding_css }}" />{% endif %}
+
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
 </head>
 
 <body>
@@ -109,6 +112,22 @@ app["pageOptions"] = {
     cur_note: {% if request.cur_note %} {'id': '{{ request.cur_note.id }}'} {% else %} null {% endif %}
 };
 </script>
+
+<script type="text/javascript">
+$('#import-group-btn-json').click(function () {
+    $('#upload-json-form').modal();
+	console.log("1");
+    $('#simplemodal-container').css({'width':'auto', 'height':'auto'});
+});
+$('#upload-json-form').submit(function() {
+    var form = $(this);
+    if (!$('[name=file]', form).val()) {
+        $('.error', form).removeClass('hide');
+        return false;
+    }
+});
+</script>
+
 <script src="{{ STATIC_URL }}scripts/i18n/{{ LANGUAGE_CODE }}/djangojs.js"></script>
 {% if debug %}
 <script data-main="{% static "scripts/sysadmin-main.js" %}" src="{% static "scripts/lib/require.js" %}"></script>
