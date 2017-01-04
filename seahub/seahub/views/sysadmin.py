@@ -5,6 +5,7 @@ import os
 from types import FunctionType
 import logging
 import json
+import ijson
 import re
 import datetime
 import csv, chardet, StringIO
@@ -1778,9 +1779,65 @@ def batch_user_make_admin(request):
 
 @login_required
 @sys_staff_required
+def batch_add_user_json(request):
+    """Batch add users. Import users from JSON file.
+    """
+    if request.method != 'POST':
+        raise Http404
+
+    form = BatchAddUserForm(request.POST, request.FILES)
+    if form.is_valid():
+        content = request.FILES['file'].read()
+        encoding = chardet.detect(content)['encoding']
+        if encoding != 'utf-8':
+            content = content.decode(encoding, 'replace').encode('utf-8')
+
+        datas = json.loads(content)
+
+        print len(datas["users"])
+
+        i = 0
+        while i <  len(datas["users"]):
+            username = datas["users"][i]["email"]
+            password = datas["users"][i]["password"]
+            print username 
+        
+            if not is_valid_username(username):
+                continue
+
+            if password == '':
+                continue
+            i += 1
+
+            try:
+                User.objects.get(email=username)
+                continue
+            except User.DoesNotExist:
+                User.objects.create_user(username, password, is_staff=False,
+                                        is_active=True)
+
+                send_html_email_with_dj_template(
+                    username, dj_template='sysadmin/user_batch_add_email.html',
+                    subject=_(u'You are invited to join %s') % SITE_NAME,
+                    context={
+                        'user': email2nickname(request.user.username),
+                        'email': username,
+                        'password': password,
+                    })
+
+        messages.success(request, _('Import succeeded'))
+    else:
+        messages.error(request, _(u'Please select a json file first.'))
+
+    next = request.META.get('HTTP_REFERER', reverse(sys_user_admin))
+    return HttpResponseRedirect(next)
+
+@login_required
+@sys_staff_required
 def batch_add_user(request):
     """Batch add users. Import users from CSV file.
     """
+
     if request.method != 'POST':
         raise Http404
 
@@ -1794,9 +1851,11 @@ def batch_add_user(request):
         filestream = StringIO.StringIO(content)
         reader = csv.reader(filestream)
 
+
         for row in reader:
             if not row:
                 continue
+            print row[0]
 
             username = row[0].strip()
             password = row[1].strip()
@@ -1812,7 +1871,7 @@ def batch_add_user(request):
                 continue
             except User.DoesNotExist:
                 User.objects.create_user(username, password, is_staff=False,
-                                         is_active=True)
+                                        is_active=True)
 
                 send_html_email_with_dj_template(
                     username, dj_template='sysadmin/user_batch_add_email.html',

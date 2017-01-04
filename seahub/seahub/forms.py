@@ -156,7 +156,7 @@ class RepoSettingForm(forms.Form):
 
 class BatchAddUserForm(forms.Form):
     """
-    Form for importing users from CSV file.
+    Form for importing users from CSV/JSON file.
     """
     file = forms.FileField()
 

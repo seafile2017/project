@@ -60,7 +60,7 @@
     <button type="submit" class="submit">{% trans "Submit" %}</button>
 </form>
 
-<form id="upload-json-form" class="hide" enctype="multipart/form-data" method="post" action="{% url 'batch_add_user' %}">{% csrf_token %}
+<form id="upload-json-form" class="hide" enctype="multipart/form-data" method="post" action="{% url 'batch_add_user_json' %}">{% csrf_token %}
     <h3>{% trans "Import users from a JSON file" %}</h3>
     <input type="file" name="file" />
     <p class="tip">{% trans "File format: "%}</p>
