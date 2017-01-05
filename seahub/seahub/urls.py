@@ -251,7 +251,6 @@ urlpatterns = patterns(
     url(r'^sys/useradmin/ldap/imported$', sys_user_admin_ldap_imported, name='sys_useradmin_ldap_imported'),
     url(r'^sys/useradmin/admins/$', sys_user_admin_admins, name='sys_useradmin_admins'),
     url(r'^sys/groupadmin/export-excel/$', sys_group_admin_export_excel, name='sys_group_admin_export_excel'),
-    url(r'^sys/groupadmin/batch_add_group$', batch_add_group, name='batch_add_group'),
     url(r'^sys/groupadmin/(?P<group_id>\d+)/$', sys_admin_group_info, name='sys_admin_group_info'),
     url(r'^sys/orgadmin/$', sys_org_admin, name='sys_org_admin'),
     url(r'^sys/orgadmin/search/$', sys_org_search, name='sys_org_search'),
@@ -296,6 +295,7 @@ urlpatterns = patterns(
 	url(r'^useradmin/batchadduserjson/$', batch_add_user_json, name='batch_add_user_json'),
 
     url(r'^client-login/$', client_token_login, name='client_token_login'),
+    url(r'^useradmin/batchaddgroupjson/$', batch_add_group_json, name='batch_add_group_json'),
 )
 
 from seahub.utils import EVENTS_ENABLED

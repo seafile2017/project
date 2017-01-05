@@ -160,6 +160,12 @@ class BatchAddUserForm(forms.Form):
     """
     file = forms.FileField()
 
+class BatchAddGroupForm(forms.Form):
+    """
+    Form for importing groupes from CSV/JSON file.
+    """
+    file = forms.FileField()
+
 
 class TermsAndConditionsForm(forms.Form):
     """Form to save T&C.

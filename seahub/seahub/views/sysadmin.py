@@ -22,6 +22,13 @@ from django.template import RequestContext
 from django.utils import timezone
 from django.utils.translation import ugettext as _
 
+from seahub.group.utils import validate_group_name, check_group_name_conflict, \
+    is_group_member, is_group_admin, is_group_owner, is_group_admin_or_owner
+
+from seahub.group.signals import add_user_to_group
+
+from seahub.api2.utils import api_error
+
 import seaserv
 from seaserv import ccnet_threaded_rpc, seafserv_threaded_rpc, \
     seafile_api, get_group, get_group_members, ccnet_api
@@ -38,7 +45,7 @@ from seahub.constants import GUEST_USER, DEFAULT_USER
 from seahub.institutions.models import Institution, InstitutionAdmin
 from seahub.invitations.models import Invitation
 from seahub.role_permissions.utils import get_available_roles
-from seahub.utils import IS_EMAIL_CONFIGURED, string2list, is_valid_username, \
+from seahub.utils import IS_EMAIL_CONFIGURED, string2list, is_valid_username, is_org_context, \
     is_pro_version, send_html_email, get_user_traffic_list, get_server_id, \
     clear_token, handle_virus_record, get_virus_record_by_id, \
     get_virus_record, FILE_AUDIT_ENABLED, get_max_upload_file_size
@@ -53,7 +60,7 @@ from seahub.utils.user_permissions import (get_basic_user_roles,
 from seahub.views import get_system_default_repo_id
 from seahub.views.ajax import (get_related_users_by_org_repo,
                                get_related_users_by_repo)
-from seahub.forms import SetUserQuotaForm, AddUserForm, BatchAddUserForm, \
+from seahub.forms import SetUserQuotaForm, AddUserForm, BatchAddUserForm, BatchAddGroupForm, \
     TermsAndConditionsForm
 from seahub.options.models import UserOptions
 from seahub.profile.models import Profile, DetailedProfile
@@ -1035,14 +1042,6 @@ def sys_group_admin_export_excel(request):
 
 @login_required
 @sys_staff_required
-def import_json_group(request):
-    """ Import Group from JSON file
-    """
-
-    return response
-
-@login_required
-@sys_staff_required
 def sys_admin_group_info(request, group_id):
 
     group_id = int(group_id)
@@ -1834,6 +1833,87 @@ def batch_add_user_json(request):
 
 @login_required
 @sys_staff_required
+def batch_add_group_json(request):
+    """Batch add group. Import users from JSON file.
+    """
+    if request.method != 'POST':
+        raise Http404
+
+    form = BatchAddGroupForm(request.POST, request.FILES)
+    if form.is_valid():
+        content = request.FILES['file'].read()
+        encoding = chardet.detect(content)['encoding']
+        if encoding != 'utf-8':
+            content = content.decode(encoding, 'replace').encode('utf-8')
+
+        datas = json.loads(content)
+
+        i = 0
+        j = 0
+        groupid = -1
+        username = request.user.username
+
+        while j < len(datas["groups"]):
+
+            groupname = datas["groups"][j]["nom"]
+
+            if not validate_group_name(groupname):
+                error_msg = _(u'Group name can only contain letters, numbers, blank, hyphen or underscore')
+                return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
+
+            if not check_group_name_conflict(request, groupname):
+                print "not conflict"
+                if is_org_context(request):
+                    orgid = request.user.org.org_id
+                    groupid = seaserv.ccnet_threaded_rpc.create_org_group(orgid,
+                                                                   groupname,
+                                                                   username)
+                else:
+                    groupid = ccnet_threaded_rpc.create_group(groupname,
+                                                                   username)
+            else:
+                print "error"
+                error_msg = _(u'There is already a group with that name.')
+                return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
+
+
+            while i < len(datas["groups"][j]["users"]):
+
+                email = datas["groups"][j]["users"][i]["email"]
+
+                i += 1
+
+
+                try:
+
+                    if is_org_context(request):
+                        orgid = request.user.org.org_id
+                        if not ccnet_api.org_user_exists(orgid, email):
+                            error_msg = _(u'User %s not found in organization.') % email
+                            return api_error(status.HTTP_404_NOT_FOUND, error_msg)
+
+                    if not is_group_member(groupid, email):
+                        ccnet_api.group_add_member(groupid, username, email)
+                        add_user_to_group.send(sender=None,
+                                            group_staff=username,
+                                            group_id=groupid,
+                                            added_user=email)
+                except SearpcError as e:
+                    logger.error(e)
+                    error_msg = 'Internal Server Error'
+                    return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+
+            j += 1
+
+        messages.success(request, _('Import succeeded'))
+    else:
+        messages.error(request, _(u'Please select a json file first.'))
+
+    next = request.META.get('HTTP_REFERER', reverse(sys_user_admin))
+    return HttpResponseRedirect(next)
+
+@login_required
+@sys_staff_required
 def batch_add_user(request):
     """Batch add users. Import users from CSV file.
     """
@@ -1872,60 +1952,6 @@ def batch_add_user(request):
             except User.DoesNotExist:
                 User.objects.create_user(username, password, is_staff=False,
                                         is_active=True)
-
-                send_html_email_with_dj_template(
-                    username, dj_template='sysadmin/user_batch_add_email.html',
-                    subject=_(u'You are invited to join %s') % SITE_NAME,
-                    context={
-                        'user': email2nickname(request.user.username),
-                        'email': username,
-                        'password': password,
-                    })
-
-        messages.success(request, _('Import succeeded'))
-    else:
-        messages.error(request, _(u'Please select a csv file first.'))
-
-    next = request.META.get('HTTP_REFERER', reverse(sys_user_admin))
-    return HttpResponseRedirect(next)
-
-@login_required
-@sys_staff_required
-def batch_add_group(request):
-    """Batch add users. Import users from CSV file.
-    """
-    if request.method != 'POST':
-        raise Http404
-
-    form = BatchAddUserForm(request.POST, request.FILES)
-    if form.is_valid():
-        content = request.FILES['file'].read()
-        encoding = chardet.detect(content)['encoding']
-        if encoding != 'utf-8':
-            content = content.decode(encoding, 'replace').encode('utf-8')
-
-        filestream = StringIO.StringIO(content)
-        reader = csv.reader(filestream)
-
-        for row in reader:
-            if not row:
-                continue
-
-            username = row[0].strip()
-            password = row[1].strip()
-
-            if not is_valid_username(username):
-                continue
-
-            if password == '':
-                continue
-
-            try:
-                User.objects.get(email=username)
-                continue
-            except User.DoesNotExist:
-                User.objects.create_user(username, password, is_staff=False,
-                                         is_active=True)
 
                 send_html_email_with_dj_template(
                     username, dj_template='sysadmin/user_batch_add_email.html',
