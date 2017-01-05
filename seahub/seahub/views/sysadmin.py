@@ -1859,49 +1859,46 @@ def batch_add_group_json(request):
 
             if not validate_group_name(groupname):
                 error_msg = _(u'Group name can only contain letters, numbers, blank, hyphen or underscore')
-                return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
-
-            if not check_group_name_conflict(request, groupname):
-                print "not conflict"
-                if is_org_context(request):
-                    orgid = request.user.org.org_id
-                    groupid = seaserv.ccnet_threaded_rpc.create_org_group(orgid,
-                                                                   groupname,
-                                                                   username)
-                else:
-                    groupid = ccnet_threaded_rpc.create_group(groupname,
-                                                                   username)
+                print error_msg
             else:
-                print "error"
-                error_msg = _(u'There is already a group with that name.')
-                return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
-
-
-            while i < len(datas["groups"][j]["users"]):
-
-                email = datas["groups"][j]["users"][i]["email"]
-
-                i += 1
-
-
-                try:
-
+                if not check_group_name_conflict(request, groupname):
                     if is_org_context(request):
                         orgid = request.user.org.org_id
-                        if not ccnet_api.org_user_exists(orgid, email):
-                            error_msg = _(u'User %s not found in organization.') % email
-                            return api_error(status.HTTP_404_NOT_FOUND, error_msg)
+                        groupid = seaserv.ccnet_threaded_rpc.create_org_group(orgid,
+                                                                   groupname,
+                                                                   username)
+                    else:
+                        groupid = ccnet_threaded_rpc.create_group(groupname,
+                                                                   username)
 
-                    if not is_group_member(groupid, email):
-                        ccnet_api.group_add_member(groupid, username, email)
-                        add_user_to_group.send(sender=None,
+                    while i < len(datas["groups"][j]["users"]):
+                        email = datas["groups"][j]["users"][i]["email"]
+
+                        i += 1
+
+                        User.objects.get(email=email)
+                        error_msg = 'User %s not found.' % email
+                        print error_msg
+
+                        if is_group_member(group_id, email):
+                            error_msg = _(u'User %s is already a group member.') % email
+                            print error_msg
+
+                        if is_org_context(request):
+                            orgid = request.user.org.org_id
+                            if not ccnet_api.org_user_exists(orgid, email):
+                                error_msg = _(u'User %s not found in organization.') % email
+                                print error_msg
+
+                        if not is_group_member(groupid, email):
+                            ccnet_api.group_add_member(groupid, username, email)
+                            add_user_to_group.send(sender=None,
                                             group_staff=username,
                                             group_id=groupid,
                                             added_user=email)
-                except SearpcError as e:
-                    logger.error(e)
-                    error_msg = 'Internal Server Error'
-                    return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+                else:
+                    error_msg = _(u'There is already a group with that name.')
+                    print error_msg
 
             j += 1
 
