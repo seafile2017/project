@@ -126,6 +126,8 @@ static struct file_type_map ftmap[] = {
     { "PNG", "image/png" },
     { "gif", "image/gif" },
     { "GIF", "image/gif" },
+    { "rar", "application/x-rar-compressed" },
+
     { NULL, NULL },
 };
 
