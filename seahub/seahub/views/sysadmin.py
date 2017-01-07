@@ -1840,22 +1840,27 @@ def batch_add_group_json(request):
         raise Http404
 
     form = BatchAddGroupForm(request.POST, request.FILES)
+
     if form.is_valid():
+
         content = request.FILES['file'].read()
         encoding = chardet.detect(content)['encoding']
         if encoding != 'utf-8':
             content = content.decode(encoding, 'replace').encode('utf-8')
 
         datas = json.loads(content)
+        print type(datas)
 
         i = 0
         j = 0
         groupid = -1
         username = request.user.username
+        print username
 
         while j < len(datas["groups"]):
-
+            print j 
             groupname = datas["groups"][j]["nom"]
+            print groupname
 
             if not validate_group_name(groupname):
                 error_msg = _(u'Group name can only contain letters, numbers, blank, hyphen or underscore')
@@ -1873,14 +1878,24 @@ def batch_add_group_json(request):
 
                     while i < len(datas["groups"][j]["users"]):
                         email = datas["groups"][j]["users"][i]["email"]
+                        print email
+                        print groupid
+                        print username
 
                         i += 1
 
-                        User.objects.get(email=email)
-                        error_msg = 'User %s not found.' % email
-                        print error_msg
+                        try:
+                            user = User.objects.get(email=email)
+                            user_profile = Profile.objects.get_profile_by_user(user.email)
+                            if user_profile:
+                                user.contact_email = user_profile.contact_email
+                                user.name = user_profile.nickname
+                        except User.DoesNotExist:
+                            continue
+                            error_msg = 'User %s not found.' % email 
+                            print error_msg
 
-                        if is_group_member(group_id, email):
+                        if is_group_member(groupid, email):
                             error_msg = _(u'User %s is already a group member.') % email
                             print error_msg
 
