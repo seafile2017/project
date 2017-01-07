@@ -2026,14 +2026,153 @@ def ajax_group_members_import(request, group_id):
         return HttpResponse(json.dumps(result), status=403,
                         content_type=content_type)
 
+    content = uploaded_file.read()
+    encoding = chardet.detect(content)['encoding']
+    if encoding != 'utf-8':
+        content = content.decode(encoding, 'replace').encode('utf-8')
+
+    ext = os.path.splitext(uploaded_file.name)
+
+    # prepare email list from uploaded file
+    emails_list = []
+
+    if ext[1] == ".csv":
+        print 'fichier : %s' %(ext[1])
+
+        try:
+            filestream = StringIO.StringIO(content)
+            reader = csv.reader(filestream)
+        except Exception as e:
+            logger.error(e)
+            result['error'] = 'Internal Server Error'
+            return HttpResponse(json.dumps(result), status=500,
+                        content_type=content_type)
+
+        for row in reader:
+            if not row:
+                continue
+
+            email = row[0].strip().lower()
+            emails_list.append(email)
+
+    elif ext[1] == ".json":
+        print 'fichier : %s' %(ext[1])
+
+        try:
+            datas = json.loads(content)
+        except Exception as e:
+            logger.error(e)
+            result['error'] = 'Internal Server Error'
+            return HttpResponse(json.dumps(result), status=500,
+                        content_type=content_type)
+
+        i = 0
+        while i <  len(datas["members"]):
+            email = datas["members"][i]["email"]
+            emails_list.append(email)
+            i += 1
+
+    org_id = None
+    if is_org_context(request):
+        org_id = request.user.org.org_id
+
+    result = {}
+    result['failed'] = []
+    result['success'] = []
+    emails_need_add = []
+
+    # check email validation
+    for email in emails_list:
+        try:
+            User.objects.get(email=email)
+        except User.DoesNotExist:
+            result['failed'].append({
+                'email': email,
+                'error_msg': 'User %s not found.' % email
+                })
+            continue
+
+        if is_group_member(group_id, email):
+            result['failed'].append({
+                'email': email,
+                'error_msg': _(u'User %s is already a group member.') % email
+                })
+            continue
+
+        # Can only invite organization users to group
+        if org_id and not \
+            seaserv.ccnet_threaded_rpc.org_user_exists(org_id, email):
+            result['failed'].append({
+                'email': email,
+                'error_msg': _(u'User %s not found in organization.') % email
+                })
+            continue
+
+        emails_need_add.append(email)
+
+    # Add email to group.
+    for email in emails_need_add:
+        try:
+            seaserv.ccnet_threaded_rpc.group_add_member(group_id,
+                username, email)
+            member_info = get_group_member_info(request, group_id, email)
+            result['success'].append(member_info)
+        except SearpcError as e:
+            logger.error(e)
+            result['failed'].append({
+                'email': email,
+                'error_msg': 'Internal Server Error'
+                })
+
+    return HttpResponse(json.dumps(result), content_type=content_type)
+
+@login_required_ajax
+def ajax_group_members_import_json(request, group_id):
+    """Import users to group from json file
+
+    Permission checking:
+    1. Only group admin can add import group members
+    """
+    
+    result = {}
+    username = request.user.username
+    content_type = 'application/json; charset=utf-8'
+
+    group_id = int(group_id)
+    try:
+        group = seaserv.get_group(group_id)
+
+        if not group:
+            result['error'] = 'Group %s not found.' % group_id
+            return HttpResponse(json.dumps(result), status=404,
+                            content_type=content_type)
+        # check permission
+        if not is_group_admin_or_owner(group_id, username):
+            result['error'] = 'Permission denied.'
+            return HttpResponse(json.dumps(result), status=403,
+                            content_type=content_type)
+
+    except SearpcError as e:
+        logger.error(e)
+        result['error'] = 'Internal Server Error'
+        return HttpResponse(json.dumps(result), status=500,
+                        content_type=content_type)
+
+
+    # get and convert uploaded file
+    uploaded_file = request.FILES['file']
+    if uploaded_file.size > 10 * 1024 * 1024:
+        result['error'] = _(u'Failed, file is too large')
+        return HttpResponse(json.dumps(result), status=403,
+                        content_type=content_type)
+
     try:
         content = uploaded_file.read()
         encoding = chardet.detect(content)['encoding']
         if encoding != 'utf-8':
             content = content.decode(encoding, 'replace').encode('utf-8')
 
-        filestream = StringIO.StringIO(content)
-        reader = csv.reader(filestream)
+        datas = json.loads(content)
     except Exception as e:
         logger.error(e)
         result['error'] = 'Internal Server Error'
@@ -2042,11 +2181,9 @@ def ajax_group_members_import(request, group_id):
 
     # prepare email list from uploaded file
     emails_list = []
-    for row in reader:
-        if not row:
-            continue
-
-        email = row[0].strip().lower()
+    i = 0
+    while i <  len(datas["members"]):
+        email = datas["members"][i]["email"]
         emails_list.append(email)
 
     org_id = None

@@ -147,6 +147,7 @@ define([
                 case 'group_member': return siteRoot + 'api/v2.1/groups/' + options.group_id + '/members/' + options.email + '/';
                 case 'group_member_bulk': return siteRoot + 'api/v2.1/groups/' + options.group_id + '/members/bulk/';
                 case 'group_import_members': return siteRoot + 'ajax/group/' + options.group_id + '/members/import/';
+                case 'group_import_members_json': return siteRoot + 'ajax/group/' + options.group_id + '/members/import-json/';
                 case 'group_repos': return siteRoot + 'api2/groups/' + options.group_id + '/repos/';
                 case 'toggle_group_modules': return siteRoot + 'ajax/group/' + options.group_id + '/toggle-modules/';
                 case 'group_discussions': return siteRoot + 'api2/groups/' + options.group_id + '/discussions/';

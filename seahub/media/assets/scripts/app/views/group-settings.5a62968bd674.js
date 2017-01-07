@@ -17,6 +17,7 @@ define([
         renameTemplate: _.template($('#group-rename-form-tmpl').html()),
         transferTemplate: _.template($('#group-transfer-form-tmpl').html()),
         importMembersTemplate: _.template($('#group-import-members-form-tmpl').html()),
+        importMembersTemplateJson: _.template($('#group-import-members-form-tmpl-json').html()),
 
         initialize: function(options) {
             PopoverView.prototype.initialize.call(this);
@@ -80,6 +81,9 @@ define([
                     break;
                 case 'import-members':
                     this.importMembers();
+                    break;
+                case 'import-members-json':
+                    this.importMembersJson();
                     break;
                 case 'manage-members':
                     this.manageMembers();
@@ -258,6 +262,65 @@ define([
                 $.ajax({
                     url: Common.getUrl({
                         'name': 'group_import_members',
+                        'group_id': _this.groupView.group.id
+                    }),
+                    type: 'post',
+                    dataType: 'json',
+                    data: formData,
+                    processData: false,  // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    beforeSend: Common.prepareCSRFToken,
+                    success: function(data) {
+                        if (data.failed.length > 0) {
+                            var err_msg = '';
+                            $(data.failed).each(function(index, item) {
+                                err_msg += item.email + ': ' + item.error_msg + '<br />';
+                            });
+                            $error.html(err_msg).removeClass('hide');
+                            Common.enableButton($submitBtn);
+                        } else {
+                            $.modal.close();
+                            Common.feedback(gettext("Successfully imported."), 'success');
+                        }
+                    },
+                    error: function(xhr) {
+                        var error_msg;
+                        if (xhr.responseText) {
+                            error_msg = $.parseJSON(xhr.responseText).error;
+                        } else {
+                            error_msg = gettext("Failed. Please check the network.");
+                        }
+                        $error.html(error_msg).removeClass('hide');
+                        Common.enableButton($submitBtn);
+                    }
+                });
+                return false;
+            });
+        },
+
+        importMembersJson: function() {
+            var _this = this;
+            var $form = $(this.importMembersTemplateJson());
+            $form.modal({focus:false});
+            $('#simplemodal-container').css({'width':'auto', 'height':'auto'});
+
+            $form.submit(function() {
+                var $fileInput = $('[name=file]', $form)[0];
+                var $error = $('.error', $form);
+                if (!$fileInput.files.length) {
+                    $error.html(gettext("Please choose a JSON file")).removeClass('hide');
+                    return false;
+                }
+
+                var $submitBtn = $('[type="submit"]', $(this));
+                Common.disableButton($submitBtn);
+
+                var file = $fileInput.files[0];
+                var formData = new FormData();
+                formData.append('file', file);
+                $.ajax({
+                    url: Common.getUrl({
+                        'name': 'group_import_members_json',
                         'group_id': _this.groupView.group.id
                     }),
                     type: 'post',
