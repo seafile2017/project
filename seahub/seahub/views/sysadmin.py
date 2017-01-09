@@ -1927,36 +1927,30 @@ def batch_add_group_json(request):
 @login_required
 @sys_staff_required
 def batch_add_group_csv(request):
-    """Batch add group. Import users from JSON file.
+    """Batch add group. Import users from CSV file.
     """
     if request.method != 'POST':
         raise Http404
-
     form = BatchAddGroupForm(request.POST, request.FILES)
-
     if form.is_valid():
-
         content = request.FILES['file'].read()
         encoding = chardet.detect(content)['encoding']
         if encoding != 'utf-8':
             content = content.decode(encoding, 'replace').encode('utf-8')
-
         filestream =StringIO.StringIO(content)
-		reader = csv.reader(filestream)
-		
-		for row in reader:
-			if not row:
-				continue
-		
-			groupname = row[0].strip()
-			email = row[1].strip()
-			
-			print email
-			print groupname
-			
-			groupid=-1
-			username = request.user.username
-
+        reader = csv.reader(filestream)
+        
+        for row in reader:
+            if not row:
+                continue
+        
+            groupname = row[0].strip()
+            
+            print groupname
+        
+            groupid=-1
+            username = request.user.username
+        
             if not validate_group_name(groupname):
                 error_msg = _(u'Group name can only contain letters, numbers, blank, hyphen or underscore')
                 print error_msg
@@ -1970,7 +1964,9 @@ def batch_add_group_csv(request):
                     else:
                         groupid = ccnet_threaded_rpc.create_group(groupname,
                                                                    username)
-
+                    i=1
+                    while i< len(row):
+                        email = row[i].strip()
                         try:
                             user = User.objects.get(email=email)
                             user_profile = Profile.objects.get_profile_by_user(user.email)
@@ -1981,37 +1977,30 @@ def batch_add_group_csv(request):
                             continue
                             error_msg = 'User %s not found.' % email 
                             print error_msg
-
                         if is_group_member(groupid, email):
                             error_msg = _(u'User %s is already a group member.') % email
                             print error_msg
-
                         if is_org_context(request):
                             orgid = request.user.org.org_id
                             if not ccnet_api.org_user_exists(orgid, email):
                                 error_msg = _(u'User %s not found in organization.') % email
                                 print error_msg
-
                         if not is_group_member(groupid, email):
                             ccnet_api.group_add_member(groupid, username, email)
                             add_user_to_group.send(sender=None,
                                             group_staff=username,
                                             group_id=groupid,
                                             added_user=email)
-                        
+                        i += 1
                 else:
                     error_msg = _(u'There is already a group with that name.')
                     print error_msg
-
             
-
         messages.success(request, _('Import succeeded'))
     else:
         messages.error(request, _(u'Please select a json file first.'))
-
     next = request.META.get('HTTP_REFERER', reverse(sys_user_admin))
-    return HttpResponseRedirect(next)		
-        
+    return HttpResponseRedirect(next)       
 
 @login_required
 @sys_staff_required
