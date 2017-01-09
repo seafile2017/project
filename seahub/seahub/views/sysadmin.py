@@ -1855,10 +1855,10 @@ def batch_add_group_json(request):
         username = request.user.username
 
         while j < len(datas["groups"]):
-            print "££££££"
+            print "Boucle groupes"
             print 'j= %d' %j 
             groupname = datas["groups"][j]["nom"]
-            print groupname
+            print "groupe name : %s" %groupname
 
             if not validate_group_name(groupname):
                 error_msg = _(u'Group name can only contain letters, numbers, blank, hyphen or underscore')
@@ -1875,7 +1875,7 @@ def batch_add_group_json(request):
                                                                    username)
                     i = 0
                     while i < len(datas["groups"][j]["users"]):
-                        print "$$$$$$$"
+                        print "boucle users"
                         print 'i= %d' %i
                         email = datas["groups"][j]["users"][i]["email"]
                         print email
