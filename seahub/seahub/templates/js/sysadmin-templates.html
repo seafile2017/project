@@ -18,6 +18,7 @@
             <a href="{{ SITE_ROOT }}sysadmin/#all-libs/"><span class="sf2-icon-library"></span>{% trans "Libraries" %}</a>
         </li>
         <li class="tab">
+		
             <a href="{{ SITE_ROOT }}sys/useradmin/"><span class="sf2-icon-user"></span>{% trans "Users" %}</a>
         </li>
         <li class="tab<% if (cur_tab == 'groups') { %> tab-cur<% } %>">
@@ -519,12 +520,18 @@
 {% endblock %}
 
 <script type="text/template" id="groups-tmpl">
-
         <h3 class="fleft">{% trans "Groups" %}</h3>
+        <ul>
+        <li>
         <a class="sf-btn-link btn-white js-export-excel fright hide" href="{% url "sys_group_admin_export_excel" %}">{% trans "Export Excel" %}</a>
-
-	<button id="import-group-btn-json" class="sf-btn-link btn-white js-export-excel fright 	hide" onclick="$('#upload-json-form').modal();$('#simplemodal-container').css({'width':'auto', 'height':'auto'});">{% trans "Import group JSON" %}</button>
-
+        </li>
+        <li>
+	   <button id="import-group-btn-json" class="sf-btn-link btn-white js-export-excel fright 	hide" onclick="$('#upload-json-form').modal();$('#simplemodal-container').css({'width':'auto', 'height':'auto'});">{% trans "Import group JSON" %}</button>
+       </li>
+       <li>
+        <button id="import-group-btn-csv" class="sf-btn-link btn-white js-export-excel fright  hide" onclick="$('#upload-csv-form').modal();$('#simplemodal-container').css({'width':'auto', 'height':'auto'});">{% trans "Import group CSV" %}</button>
+        </li>
+        </ul>
         <form id="upload-json-form" class="hide" onSubmit="var form = $(this);if (!$('[name=file]', form).val()) {$('.error', form).removeClass('hide');return false;}" enctype="multipart/form-data" method="post" action="{% url 'batch_add_group_json' %}">{% csrf_token %}
     		<h3>{% trans "Import groups from a JSON file" %}</h3>
     		<input type="file" name="file" />
@@ -532,6 +539,13 @@
     		<p class="error hide">{% trans "Please choose a JSON file" %}</p>
     		<button type="submit" class="submit">{% trans "Submit" %}</button>
 	</form>
+        <form id="upload-csv-form" class="hide" onSubmit="var form = $(this);if (!$('[name=file]', form).val()) {$('.error', form).removeClass('hide');return false;}" enctype="multipart/form-data" method="post" action="{% url 'batch_add_group_csv' %}">{% csrf_token %}
+            <h3>{% trans "Import groups from a CSV file" %}</h3>
+            <input type="file" name="file" />
+            <p class="tip">{% trans "File format: "%}</p>
+            <p class="error hide">{% trans "Please choose a CSV file" %}</p>
+            <button type="submit" class="submit">{% trans "Submit" %}</button>
+    </form>
 
     <span class="loading-icon loading-tip"></span>
     <table>
