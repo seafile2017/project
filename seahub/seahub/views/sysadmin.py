@@ -5,7 +5,6 @@ import os
 from types import FunctionType
 import logging
 import json
-import ijson
 import re
 import datetime
 import csv, chardet, StringIO
@@ -1849,16 +1848,15 @@ def batch_add_group_json(request):
             content = content.decode(encoding, 'replace').encode('utf-8')
 
         datas = json.loads(content)
-        print type(datas)
 
         i = 0
         j = 0
         groupid = -1
         username = request.user.username
-        print username
 
         while j < len(datas["groups"]):
-            print j 
+            print "££££££"
+            print 'j= %d' %j 
             groupname = datas["groups"][j]["nom"]
             print groupname
 
@@ -1875,14 +1873,14 @@ def batch_add_group_json(request):
                     else:
                         groupid = ccnet_threaded_rpc.create_group(groupname,
                                                                    username)
-
+                    i = 0
                     while i < len(datas["groups"][j]["users"]):
+                        print "$$$$$$$"
+                        print 'i= %d' %i
                         email = datas["groups"][j]["users"][i]["email"]
                         print email
                         print groupid
-                        print username
 
-                        i += 1
 
                         try:
                             user = User.objects.get(email=email)
@@ -1911,6 +1909,7 @@ def batch_add_group_json(request):
                                             group_staff=username,
                                             group_id=groupid,
                                             added_user=email)
+                        i += 1
                 else:
                     error_msg = _(u'There is already a group with that name.')
                     print error_msg
