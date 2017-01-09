@@ -1805,7 +1805,7 @@ def batch_add_user_json(request):
 
             if password == '':
                 continue
-            i += 1
+            i += 1 
 
             try:
                 User.objects.get(email=username)
